@@ -21,7 +21,7 @@ public class PetProvider extends ContentProvider {
      * Initialize the provider and the database helper object.
      */
 private  static final int PETS=100;
- private static final int PETS_ID=101;
+    private static final int PETS_ID=101;
     private static final String LOG_TAG=PetProvider.class.getSimpleName();
 
 
@@ -99,7 +99,25 @@ private  static final int PETS=100;
     }
 
    private   Uri insertPet(Uri uri,ContentValues contentValues){
-          SQLiteDatabase db=mPetdataFeeder.getWritableDatabase();
+
+       String name=contentValues.getAsString(PetContract.PetEntry.COLUMN_PET_NAME);
+
+       Integer gender=contentValues.getAsInteger(PetContract.PetEntry.COLUMN_PET_GENDER);
+       Integer weight=contentValues.getAsInteger(PetContract.PetEntry.COLUMN_PET_WEIGHT);
+       if(name==null ){
+
+          throw new IllegalArgumentException("Pet requires a name");
+       }
+        if(gender==null || !PetContract.PetEntry.isValidGender(gender))
+        {
+            throw new IllegalArgumentException("Pet requires a valid gender");
+
+        }
+      if(weight!=null  && weight<0){
+         throw new  IllegalArgumentException("Pet requires valid weight");
+
+      }
+       SQLiteDatabase db=mPetdataFeeder.getWritableDatabase();
        long id=db.insert(PetContract.PetEntry.TABLE_NAME,null,contentValues);
         if(id==-1){
 
@@ -114,15 +132,87 @@ private  static final int PETS=100;
      */
     @Override
     public int update(Uri uri, ContentValues contentValues, String selection, String[] selectionArgs) {
-        return 0;
+
+       final int match=sUriMatcher.match(uri);
+        switch (match){
+            case PETS:
+                return updatePet(uri,contentValues,selection,selectionArgs);
+            case PETS_ID:
+                selection=PetContract.PetEntry._ID+"=?";
+                selectionArgs=new String[]{String.valueOf(ContentUris.parseId(uri))};
+                 return updatePet(uri,contentValues,selection,selectionArgs);
+             default:
+                 throw new IllegalArgumentException("Update is not supported for " + uri);
+        }
+
+
+
     }
+
+    private int updatePet(Uri uri,ContentValues contentValues ,String selection,String[] selectionArgs) {
+        if (contentValues.containsKey(PetContract.PetEntry.COLUMN_PET_NAME)) {
+
+            String name = contentValues.getAsString(PetContract.PetEntry.COLUMN_PET_NAME);
+            if (name == null) {
+
+                throw new IllegalArgumentException("Pet requires a name");
+
+            }
+
+
+        }
+
+
+        if (contentValues.containsKey(PetContract.PetEntry.COLUMN_PET_GENDER)) {
+            Integer gender = contentValues.getAsInteger(PetContract.PetEntry.COLUMN_PET_GENDER);
+            if (gender == null || !PetContract.PetEntry.isValidGender(gender)) {
+                throw new IllegalArgumentException("Pet requires valid gender");
+            }
+        }
+
+        if (contentValues.containsKey(PetContract.PetEntry.COLUMN_PET_WEIGHT)) {
+            // Check that the weight is greater than or equal to 0 kg
+            Integer weight = contentValues.getAsInteger(PetContract.PetEntry.COLUMN_PET_WEIGHT);
+            if (weight != null && weight < 0) {
+                throw new IllegalArgumentException("Pet requires valid weight");
+            }
+
+                 }
+            if (contentValues.size() == 0) {
+                return 0;
+            }
+
+            SQLiteDatabase db = mPetdataFeeder.getWritableDatabase();
+            return db.update(PetContract.PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
+        }
 
     /**
      * Delete the data at the given selection and selection arguments.
      */
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        return 0;
+
+      SQLiteDatabase db=mPetdataFeeder.getWritableDatabase();
+        final  int match=sUriMatcher.match(uri);
+        switch (match){
+
+            case PETS:
+                return db.delete(PetContract.PetEntry.TABLE_NAME,selection,selectionArgs);
+
+            case PETS_ID:
+                selection= PetContract.PetEntry._ID+"=?";
+                selectionArgs=new String[]{String.valueOf(ContentUris.parseId(uri))};
+                return db.delete(PetContract.PetEntry.TABLE_NAME,selection,selectionArgs);
+
+            default:
+                throw new IllegalArgumentException("Deletion is not supported for " + uri);
+
+        }
+
+
+
+
+
     }
 
     /**
@@ -130,6 +220,23 @@ private  static final int PETS=100;
      */
     @Override
     public String getType(Uri uri) {
-        return null;
+
+        int match=sUriMatcher.match(uri);
+        switch (match)
+        {
+
+            case PETS:
+                return PetContract.PetEntry.CONTENT_LIST_TYPE;
+
+            case PETS_ID:
+                return PetContract.PetEntry.CONTENT_ITEM_TYPE;
+
+            default:
+                throw new IllegalStateException("Unknown URI " + uri + " with match " + match);
+
+        }
+
+
+        
     }
 }
