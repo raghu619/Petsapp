@@ -20,7 +20,7 @@ public class PetProvider extends ContentProvider {
     /**
      * Initialize the provider and the database helper object.
      */
-private  static final int PETS=100;
+   private  static final int PETS=100;
     private static final int PETS_ID=101;
     private static final String LOG_TAG=PetProvider.class.getSimpleName();
 
@@ -98,7 +98,7 @@ private  static final int PETS=100;
 
     }
 
-   private   Uri insertPet(Uri uri,ContentValues contentValues){
+   private Uri insertPet(Uri uri,ContentValues contentValues){
 
        String name=contentValues.getAsString(PetContract.PetEntry.COLUMN_PET_NAME);
 
@@ -237,6 +237,6 @@ private  static final int PETS=100;
         }
 
 
-        
+
     }
 }

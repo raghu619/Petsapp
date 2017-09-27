@@ -26,9 +26,11 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.example.android.pets.DATA.PetContract;
+import com.example.android.pets.DATA.PetCursorAdapter;
 import com.example.android.pets.DATA.PetdataFeeder;
 
 /**
@@ -90,9 +92,9 @@ public class CatalogActivity extends AppCompatActivity {
     }
 
 
-    private void displayDatabaseInfo(){
+    public void displayDatabaseInfo() {
 
-        String projection[]={
+        String projection[] = {
                 PetContract.PetEntry._ID,
                 PetContract.PetEntry.COLUMN_PET_NAME,
                 PetContract.PetEntry.COLUMN_PET_BREED,
@@ -100,13 +102,10 @@ public class CatalogActivity extends AppCompatActivity {
                 PetContract.PetEntry.COLUMN_PET_WEIGHT};
 
 
+        Cursor cursor = getContentResolver().query(PetContract.PetEntry.CONTENT_URI, projection, null, null, null);
+        ListView displayView = (ListView) findViewById(R.id.list);
 
-        Cursor cursor=getContentResolver().query(PetContract.PetEntry.CONTENT_URI,projection,null,null,null);
-
-        TextView displayView=(TextView)findViewById(R.id.text_view_pet);
-        try{
-
-            if(cursor!=null) {
+        /*if(cursor!=null) {
 
                 displayView.setText("The peta table contains " + cursor.getCount() + " pets.\n\n");
                 displayView.append(PetContract.PetEntry._ID
@@ -137,12 +136,21 @@ public class CatalogActivity extends AppCompatActivity {
                 }
 
             }
+                   */
 
-        }
-        finally {
-            cursor.close();
+            if (cursor != null )
+            {
 
-        }
+
+                PetCursorAdapter adapter = new PetCursorAdapter(this, cursor);
+                displayView.setAdapter(adapter);
+
+            }
+
+
+
+
+
 
     }
 

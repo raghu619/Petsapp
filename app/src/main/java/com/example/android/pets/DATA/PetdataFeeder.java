@@ -21,7 +21,7 @@ public class PetdataFeeder extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase sqLiteDatabase) {
-         String SQL_CREATE_PETS_TABLE="CREATE TABLE "+ PetContract.PetEntry.TABLE_NAME+"("
+         String SQL_CREATE_PETS_TABLE="CREATE TABLE "+PetContract.PetEntry.TABLE_NAME+"("
                  +PetContract.PetEntry._ID +" INTEGER PRIMARY KEY AUTOINCREMENT,"+
                  PetContract.PetEntry.COLUMN_PET_NAME+" TEXT NO NULL,"+
                  PetContract.PetEntry.COLUMN_PET_BREED+" TEXT,"+
