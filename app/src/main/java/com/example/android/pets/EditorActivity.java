@@ -15,7 +15,12 @@
  */
 package com.example.android.pets;
 
+import android.app.LoaderManager;
 import android.content.ContentValues;
+import android.content.CursorLoader;
+import android.content.Intent;
+import android.content.Loader;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
@@ -38,7 +43,7 @@ import com.example.android.pets.DATA.PetdataFeeder;
 /**
  * Allows user to create a new pet or edit an existing one.
  */
-public class EditorActivity extends AppCompatActivity {
+public class EditorActivity extends AppCompatActivity implements LoaderManager.LoaderCallbacks<Cursor> {
 
     /** EditText field to enter the pet's name */
     private EditText mNameEditText;
@@ -58,11 +63,29 @@ public class EditorActivity extends AppCompatActivity {
      */
 
     private int mGender = PetContract.PetEntry.GENDER_UNKNOWN;
-
+    private Uri mCurrentPetUri;
+    private static final int EXISTING_PET_LOADER = 0;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_editor);
+
+
+        Intent intent=getIntent();
+        Uri currentPetUri=intent.getData();
+        mCurrentPetUri=currentPetUri;
+        if(currentPetUri==null)
+        {
+
+            setTitle(getString(R.string.editor_activity_title_new_pet));
+
+        }
+
+        else {
+
+            setTitle(getString(R.string.editor_activity_title_edit_pet));
+            getLoaderManager().initLoader(EXISTING_PET_LOADER,null,this);
+        }
 
         // Find all relevant views that we will need to read user input from
         mNameEditText = (EditText) findViewById(R.id.edit_pet_name);
@@ -75,43 +98,70 @@ public class EditorActivity extends AppCompatActivity {
 
     }
 
-    private void insert(){
+    private void savepet() {
 
 
-        String name= String.valueOf(mNameEditText.getText()).trim();
-        String breed= String.valueOf(mBreedEditText.getText()).trim();
-        int gender=mGender;
-        int weight=Integer.parseInt(String.valueOf(mWeightEditText.getText()).trim());
-        ContentValues values=new ContentValues();
-        values.put(PetContract.PetEntry.COLUMN_PET_NAME,name);
-        values.put(PetContract.PetEntry.COLUMN_PET_BREED,breed);
-        values.put(PetContract.PetEntry.COLUMN_PET_GENDER,gender);
-        values.put(PetContract.PetEntry.COLUMN_PET_WEIGHT,weight);
+        String name = String.valueOf(mNameEditText.getText()).trim();
+        String breed = String.valueOf(mBreedEditText.getText()).trim();
+        int gender = mGender;
+        String weightString = mWeightEditText.getText().toString().trim();
+        //int weight = Integer.parseInt(String.valueOf(mWeightEditText.getText()).trim());
 
-      Uri newUri= getContentResolver().insert(PetContract.PetEntry.CONTENT_URI,values);
-       if(newUri==null){
-         Toast.makeText(this,getString(R.string.editor_insert_pet_failed),Toast.LENGTH_SHORT).show();
+        if(mCurrentPetUri==null && TextUtils.isEmpty(name) && TextUtils.isEmpty(breed) &&
+                TextUtils.isEmpty(weightString) && mGender ==PetContract.PetEntry.GENDER_UNKNOWN)
+
+        {
+              return;
+
+        }
+        ContentValues values = new ContentValues();
+        values.put(PetContract.PetEntry.COLUMN_PET_NAME, name);
+        values.put(PetContract.PetEntry.COLUMN_PET_BREED, breed);
+        values.put(PetContract.PetEntry.COLUMN_PET_GENDER, gender);
+        int weight=0;
+        if(!TextUtils.isEmpty(weightString))
+        {
+
+            weight=Integer.parseInt(weightString);
+        }
+        values.put(PetContract.PetEntry.COLUMN_PET_WEIGHT, weight);
+
+        //Uri newUri= getContentResolver().insert(PetContract.PetEntry.CONTENT_URI,values);
+        //if(newUri==null){
+        //Toast.makeText(this,getString(R.string.editor_insert_pet_failed),Toast.LENGTH_SHORT).show();
+
+        if (mCurrentPetUri == null) {
+
+            Uri newUri = getContentResolver().insert(PetContract.PetEntry.CONTENT_URI, values);
+
+            if (newUri == null) {
+                Toast.makeText(this, getString(R.string.editor_insert_pet_failed), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, getString(R.string.editor_insert_petsuccessful), Toast.LENGTH_SHORT).show();
+
+            }
 
 
-           }
-
-       else
-       {
-           Toast.makeText(this,getString(R.string.editor_insert_petsuccessful),Toast.LENGTH_SHORT).show();
-
-       }
+        } else {
 
 
+            int rowsAffected = getContentResolver().update(mCurrentPetUri, values, null, null);
+
+            if (rowsAffected == 0) {
+                // If no rows were affected, then there was an error with the update.
+                Toast.makeText(this, getString(R.string.editor_update_pet_failed), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, getString(R.string.editor_update_pet_successful), Toast.LENGTH_SHORT).show();
+            }
+
+
+        }
     }
 
+        /**
+         * Setup the dropdown spinner that allows the user to select the gender of the pet.
+         */
 
-
-
-
-
-    /**
-     * Setup the dropdown spinner that allows the user to select the gender of the pet.
-     */
     private void setupSpinner() {
         // Create adapter for spinner. The list options are from the String array it will use
         // the spinner will use the default layout
@@ -149,6 +199,8 @@ public class EditorActivity extends AppCompatActivity {
         });
     }
 
+
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu options from the res/menu/menu_editor.xml file.
@@ -163,7 +215,7 @@ public class EditorActivity extends AppCompatActivity {
         switch (item.getItemId()) {
             // Respond to a click on the "Save" menu option
             case R.id.action_save:
-                insert();
+                savepet();
                 finish();
 
                 // Do nothing for now
@@ -179,5 +231,69 @@ public class EditorActivity extends AppCompatActivity {
                 return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public Loader<Cursor> onCreateLoader(int i, Bundle bundle) {
+        String[] projection={
+                PetContract.PetEntry._ID,
+                PetContract.PetEntry.COLUMN_PET_WEIGHT,
+                PetContract.PetEntry.COLUMN_PET_NAME,
+                PetContract.PetEntry.COLUMN_PET_BREED,
+                PetContract.PetEntry.COLUMN_PET_GENDER};
+
+        return new CursorLoader(this,mCurrentPetUri,projection,null,null,null);
+    }
+
+    @Override
+    public void onLoadFinished(Loader<Cursor> loader, Cursor cursor) {
+
+if(cursor==null || cursor.getCount()<1)
+{
+
+
+    return;
+}
+
+if(cursor.moveToFirst()){
+
+
+             String name = cursor.getString(cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_NAME));
+              String breed =cursor.getString (cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_BREED));
+                int gender = cursor.getInt(cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_GENDER));
+                int weight = cursor.getInt(cursor.getColumnIndex(PetContract.PetEntry.COLUMN_PET_WEIGHT));
+
+            mNameEditText.setText(name);
+            mBreedEditText.setText(breed);
+            mWeightEditText.setText(Integer.toString(weight));
+
+         switch (gender){
+
+
+             case PetContract.PetEntry.GENDER_MALE:
+                 mGenderSpinner.setSelection(1);
+                 break;
+
+             case PetContract.PetEntry.GENDER_FEMALE:
+                 mGenderSpinner.setSelection(2);
+                 break;
+             default:
+                 mGenderSpinner.setSelection(0);
+                 break;
+         }
+}
+
+
+    }
+
+    @Override
+    public void onLoaderReset(Loader<Cursor> loader) {
+
+        mNameEditText.setText("");
+        mBreedEditText.setText("");
+        mGenderSpinner.setSelection(0);
+        mWeightEditText.setText("");
+
+
     }
 }

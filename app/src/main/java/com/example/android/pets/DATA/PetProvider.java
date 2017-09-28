@@ -76,6 +76,8 @@ public class PetProvider extends ContentProvider {
 
         }
 
+
+        cursor.setNotificationUri(getContext().getContentResolver(),uri);
         return cursor;
     }
 
@@ -84,8 +86,6 @@ public class PetProvider extends ContentProvider {
      */
     @Override
     public Uri insert(Uri uri, ContentValues contentValues) {
-
-
 
         final int match=sUriMatcher.match(uri);
         switch (match) {
@@ -123,6 +123,8 @@ public class PetProvider extends ContentProvider {
 
             Log.e(LOG_TAG,"Failed to insert row for"+uri);
         }
+
+       getContext().getContentResolver().notifyChange(uri,null);
          return ContentUris.withAppendedId(uri,id);
    }
 
@@ -183,7 +185,14 @@ public class PetProvider extends ContentProvider {
             }
 
             SQLiteDatabase db = mPetdataFeeder.getWritableDatabase();
-            return db.update(PetContract.PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
+
+
+        int rowsUpdated=db.update(PetContract.PetEntry.TABLE_NAME, contentValues, selection, selectionArgs);
+        if(rowsUpdated!=0){
+            getContext().getContentResolver().notifyChange(uri,null);
+        }
+
+             return rowsUpdated;
         }
 
     /**
@@ -191,18 +200,26 @@ public class PetProvider extends ContentProvider {
      */
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-
+        int rowsDeleted;
       SQLiteDatabase db=mPetdataFeeder.getWritableDatabase();
         final  int match=sUriMatcher.match(uri);
         switch (match){
 
             case PETS:
-                return db.delete(PetContract.PetEntry.TABLE_NAME,selection,selectionArgs);
+
+                 rowsDeleted=db.delete(PetContract.PetEntry.TABLE_NAME,selection,selectionArgs);
+                if(rowsDeleted!=0)
+                    getContext().getContentResolver().notifyChange(uri,null);
+                return rowsDeleted;
 
             case PETS_ID:
                 selection= PetContract.PetEntry._ID+"=?";
                 selectionArgs=new String[]{String.valueOf(ContentUris.parseId(uri))};
-                return db.delete(PetContract.PetEntry.TABLE_NAME,selection,selectionArgs);
+                getContext().getContentResolver().notifyChange(uri,null);
+                rowsDeleted=db.delete(PetContract.PetEntry.TABLE_NAME,selection,selectionArgs);
+                if(rowsDeleted!=0)
+                    getContext().getContentResolver().notifyChange(uri,null);
+                return rowsDeleted;
 
             default:
                 throw new IllegalArgumentException("Deletion is not supported for " + uri);
